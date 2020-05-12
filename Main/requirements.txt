@@ -1,0 +1,7 @@
+Flask==1.1.2
+gunicorn==20.0.4; python_version > '3.0'
+gunicorn==19.10.0; python_version < '3.0'
+google-cloud-storage==1.28.0
+google-cloud-bigquery==1.24.0
+virtualenv==20.0.20
+appdirs==1.4.3

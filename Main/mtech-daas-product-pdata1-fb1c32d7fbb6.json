@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "mtech-daas-product-pdata1",
+  "private_key_id": "fb1c32d7fbb69f4dee31ab04ff44b94d160fc4d5",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDXFGU4aLdwFhHE\nql+1p49Yg7EQ6xayuYPVsZYVSVY1eYKXwyJFvNSorpPoU1ZalwLFLtQfV1D8wgKO\nAjCne7DZXpHxS2+GPrO2M9hIm0gb46SzUfeqfSEiIIaoKMkdaexjId5iL8vnBDCq\nXpHi9/S3gIgXYDM4L6wiG+FeConVCbOY561Ztv87XigVt7EbYBrKqSiYyeclEJ8c\nuxuiXj99uEqOMgLS+NTR7dCDVkwqNtFOZku31Cl1LdkKdSxO1jRF+6EHwOp+cjFV\nqSGtZHTL9QNFk9ZFKpGt2NpcBN1oacMNIKX9dhzpC61gR+Vqjb0v+7BjGVi6Eh+d\nvun3p59tAgMBAAECggEABOftsSSbJPh6TXqdz6zaFU8XssbLnNlxDoBMNJsYimq4\n1ff5AajStWOAczKBDA4l9yDgBmdjxqHKriBfQyRZC3RGFVnYc7IqP9pp5Hbj5Ulc\nueYBclQDwl2fxLLKRGkxbHqnmHGPqWrY81UdGpWRivGb6Rb9xBo7FAh/xdKtHZaR\nQCRRx0ik5MBeZER+IK8xaAJE83MgQa30MA9TrK5PE479qSxZGQQqxHEAeD6tXN4v\nLU2bZ9S1HaS1RqF9HjJq5xbo8NYO1uDCkjDU+wmwjDOAIwaYQ4JNgNse4E4rdKCS\njCI9CnIX0eFtpK7hPOjH4e7fQxcJytrXvLJ1AhxzLwKBgQDz/yZSM1GutnCffSBl\np58NOKsvBzFITpTc/h2AZytvieXIFJHgWB2tOSYJwoUuydEjVk+u9ig97XzWThah\noSjaYMl6vqPgpSlF+i/1SlPG2HP6/t2Tixol2W4uH/YJA2hvcOm5HxWx1arracc0\nZcZmgJGanDFAAThBMYqYiGPCUwKBgQDhqRHxO2MTNoCYQlXpp+VXnjTQzuhACJJr\njQjRxc9o3bye6Jfirb165AyvXqYhRfcl2HG7fTz+fub8K5n9sQ/RwE6FM3NehnOr\n/Iyu/I+GqxMZ5KqieK/i1nNQu1tDxn4NMQyl9QtQPtmNdL5SAvozcJdHSqGYrjF/\nj6MDMkpfPwKBgDnuMmMB3DrnBgZX5wE7sv+onLwlsQXB4oY1rzt1Q1LQIsZGW/wv\n75vZHbbjgEuDjywcqf6YYyWQ5Trcf3MQmGqA4FVMPgxwKkR7Cjfq1ck4SxEkwebt\n999UqFw7Kmcpb/pFjLhvMO9wE4yhKLLAF0Lu86MJwoe3wmt4H7fnaggRAoGAAiRG\npVF4+T+1LLzEb/lF9fTsb2bnUWRDb33hLYyBEW+5UJDIkEAx4i6z6B4v2XT+iX9q\nZOslXwz5SD9psLyzd7wpgp4gZC9GfcVh2G9RNWf+QGqpK+2VTcPXSFbe4N/LZnim\ntBSFTPervOn0vHaGxWI2LVkJ+5b7pUhJtcgOaKUCgYEA5WpY9BgiOj/H3MWdwIqI\nwaXDnqYVonOZhv0COSu3vg/8q7o0s0zBXA75GhIQX1tKg+AUG4qII3ZHDmMdPGmO\nRSkMlRUVWvE+yl64t1WrKaXOraqHyITCDAFJyraRkgF1hqEy1nmpdM6dyDBP5jHs\nxWTsmX20xs9eeIzrFTR+DlI=\n-----END PRIVATE KEY-----\n",
+  "client_email": "gcp-overall-project@mtech-daas-product-pdata1.iam.gserviceaccount.com",
+  "client_id": "114947702418470861409",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gcp-overall-project%40mtech-daas-product-pdata1.iam.gserviceaccount.com"
+}

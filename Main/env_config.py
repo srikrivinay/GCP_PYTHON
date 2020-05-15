@@ -6,4 +6,5 @@ sqlpattern = ('.sql','.json')
 pypattern = ('.py')
 pathextension = 'https://storage.cloud.google.com/'+bucket_name+'/'
 fnl_table = 'transient.search_result'
+status_table = 'transient.job_status'
 fnl_prj = 'mtech-daas-testdata'

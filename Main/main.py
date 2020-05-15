@@ -3,7 +3,9 @@ from google.cloud import bigquery
 from google.cloud import storage
 from datetime import datetime as datetime
 from flask import Flask
+from flask import request
 import env_config as cfg
+import pytz
 app = Flask(__name__)
 
 credentials_data = service_account.Credentials.from_service_account_file('mtech-daas-product-pdata1-fb1c32d7fbb6.json')
@@ -14,22 +16,22 @@ def process_tablelist(search_key):
     for project_name in cfg.bq_Projects:
         bq_client = bigquery.Client(credentials=credentials_data,project=project_name)
         query_for_schema = 'SELECT schema_name FROM INFORMATION_SCHEMA.SCHEMATA'
-        
+
         try:
             schemalist = bq_client.query(query_for_schema)
         except Exception as e:
             print('Error in {0} :: {1}'.format(project_name,e))
-            
+
         for schema in schemalist:
             query_for_table = """SELECT table_catalog,table_schema,table_name,table_type 
             FROM """ + schema.schema_name + """.INFORMATION_SCHEMA.TABLES
             where LOWER(table_name) like '%""" + search_key.lower() + """%'"""
-            
+
             try:
                 tablelist = bq_client.query(query_for_table)
             except Exception as e:
                 print('Error in {0} :: {1}'.format(project_name,e))
-            
+
             if (len(list(tablelist.result())) > 0):
                 for tablerow in tablelist:
                     table_list.append((tablerow[0],tablerow[1],tablerow[2],tablerow[3]))
@@ -88,52 +90,78 @@ def process_pythonlist(unique_prefix_list,prefix_dict):
     return python_list
 
 
-def insert_bq(data):
+def insert_bq(data,table):
     bq_client = bigquery.Client(credentials=credentials_data,project=cfg.fnl_prj)
-    Query = 'INSERT ' + cfg.fnl_table + ' VALUES ' + data
+    Query = 'INSERT ' + table + ' VALUES ' + data
     insert_res = bq_client.query(Query)
-    print(insert_res.result())
+    return str(insert_res.result())
+
+
+def update_job_status(srch_key,srch_lvl,jid):
+    bq_client = bigquery.Client(credentials=credentials_data,project=cfg.fnl_prj)
+    data = (srch)
+    Query = 'INSERT ' + cfg.status_table + ' VALUES (' + srch_key + ',' + jid + ',' + srch_lvl + ',Complete)' 
+    insert_res = bq_client.query(Query)
+    return str(insert_res.result())
+
 
 @app.route('/')
 def main():
-    search_key = input('Enter search keyword: ')
-    print('Started for {0} at {1}'.format(search_key,datetime.now()))
+    args = request.args
+    if ('key' in args) and ('jid' in args):
+        search_key = args['key']
+        job_id = args['jid']
+        if ('lvl' in args):
+            try:
+                search_lvl = int(args['lvl'])
+            except:
+                search_lvl = 3
+        else:
+            search_lvl = 3
+    else:
+        return 'You are on the wrong page'
     result_list = []
-    print('Table list started at {}'.format(datetime.now()))
     table_list = process_tablelist(search_key)
-    print('Table list ended at {}'.format(datetime.now()))
-    if(len(table_list)) > 0:
-        print('SQL list started at {}'.format(datetime.now()))
+
+    if(len(table_list) > 0 and search_lvl > 1):
         script_list = process_scriptlist(table_list)
-        print('SQL list ended at {}'.format(datetime.now()))
-        if(len(script_list) > 0):
-#            unique_Script_list = []
-#            for i in range(len(script_list)):
-#                if (script_list[i][4] not in unique_Script_list):
-#                    unique_Script_list.append(script_list[i][4])
+
+        if(len(script_list) > 0 and search_lvl > 2):
             (unique_prefix_list,prefix_dict) = prepare_for_pythonlist(script_list)
-#            python_list = process_pythonlist(unique_Script_list)
-            print('Python script list started at {}'.format(datetime.now()))
             python_list = process_pythonlist(unique_prefix_list,prefix_dict)
-            print('Python script list ended at {}'.format(datetime.now()))
+            ts = str(datetime.now(pytz.timezone('US/Eastern')))
             for (prj,dset,table,tabltyp,script) in script_list:
-                ts = str(datetime.now())
                 if len(python_list[script]) > 0:
                     for i in range(len(python_list[script])):
                         python = cfg.pathextension + python_list[script][i]
-                        result_list.append((prj,dset,table,tabltyp,cfg.pathextension + script,python,ts,ts,ts))
+                        result_list.append((prj,dset,table,tabltyp,cfg.pathextension + script,python,search_lvl,ts))
                 else:
                     python = 'No python scripts found for the SQL'
-                    result_list.append((prj,dset,table,tabltyp,cfg.pathextension + script,python,ts,ts,ts))
-                    
-                
+                    result_list.append((prj,dset,table,tabltyp,cfg.pathextension + script,python,search_lvl,ts))
+
+        elif (len(script_list) > 0): 
+            ts = str(datetime.now(pytz.timezone('US/Eastern'))) 
+            for (prj,dset,table,tabltyp,script) in script_list:
+                result_list.append((prj,dset,table,tabltyp,cfg.pathextension + script,'NA',search_lvl,ts))
+
         else:
-            ts = str(datetime.now())
+            ts = str(datetime.now(pytz.timezone('US/Eastern')))
             for (prj,dset,table,tabltyp) in table_list:
                 result_list.append((prj,dset,table,tabltyp,
-                               'No SQLs found for the table','NA',ts,ts,ts))
-        insert_bq(str(result_list)[1:-1]) # [1:-1] is to remove external square brackets[] of the list
-    print('Ended for {0} at {1}'.format(search_key,datetime.now()))
+                               'No SQLs found for the table','NA',search_lvl,ts))
+
+
+    elif len(table_list) > 0:
+        ts = str(datetime.now(pytz.timezone('US/Eastern')))
+        for (prj,dset,table,tabltyp) in table_list:
+            result_list.append((prj,dset,table,tabltyp,'NA','NA',search_lvl,ts))
+
+    if (len(result_list) > 0):
+        result = insert_bq(str(result_list)[1:-1],cfg.fnl_table) # [1:-1] is to remove external square brackets[] of the list
+
+    status_data = (search_key,job_id,search_lvl,'complete')
+    status = insert_bq(str(status_data),cfg.status_table)
+    return 'Namasthe'
 
 if __name__ == '__main__':
     app.run()

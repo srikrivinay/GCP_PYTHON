@@ -2,36 +2,35 @@ from google.oauth2 import service_account
 from google.cloud import bigquery
 from google.cloud import storage
 from datetime import datetime as datetime
-from flask import Flask
-from flask import request
+from flask import Flask, request
 import env_config as cfg
 import pytz
+import threading
+
 app = Flask(__name__)
 
 credentials_data = service_account.Credentials.from_service_account_file('mtech-daas-product-pdata1-fb1c32d7fbb6.json')
 
-
 def process_tablelist(search_key):
+    global status,job_id
     table_list = []
     for project_name in cfg.bq_Projects:
         bq_client = bigquery.Client(credentials=credentials_data,project=project_name)
+        #Get the datasets
         query_for_schema = 'SELECT schema_name FROM INFORMATION_SCHEMA.SCHEMATA'
-
-        try:
-            schemalist = bq_client.query(query_for_schema)
-        except Exception as e:
-            print('Error in {0} :: {1}'.format(project_name,e))
-
+        schemalist = bq_client.query(query_for_schema)
+        if (schemalist.errors != None):
+            status = 'Error: table dataset listing'
+            kill_process(status,job_id)
         for schema in schemalist:
             query_for_table = """SELECT table_catalog,table_schema,table_name,table_type 
             FROM """ + schema.schema_name + """.INFORMATION_SCHEMA.TABLES
             where LOWER(table_name) like '%""" + search_key.lower() + """%'"""
-
-            try:
-                tablelist = bq_client.query(query_for_table)
-            except Exception as e:
-                print('Error in {0} :: {1}'.format(project_name,e))
-
+            #Get the resembling tables from datasets
+            tablelist = bq_client.query(query_for_table)
+            if (tablelist.errors != None):
+                status = 'Error: table listing'
+                kill_process(status,job_id)
             if (len(list(tablelist.result())) > 0):
                 for tablerow in tablelist:
                     table_list.append((tablerow[0],tablerow[1],tablerow[2],tablerow[3]))
@@ -91,22 +90,36 @@ def process_pythonlist(unique_prefix_list,prefix_dict):
 
 
 def insert_bq(data,table):
+    global status, job_id
     bq_client = bigquery.Client(credentials=credentials_data,project=cfg.fnl_prj)
     Query = 'INSERT ' + table + ' VALUES ' + data
-    insert_res = bq_client.query(Query)
-    return str(insert_res.result())
+    table_insert = bq_client.query(Query)
+    if (table_insert.errors != None):
+        status = 'Error: Inserting into ' + table
+        kill_process(status,job_id)
 
 
-def update_job_status(srch_key,srch_lvl,jid):
+def update_bq(status,job_id):
+    global update_error
+    update_error = False
+    table = cfg.status_table
     bq_client = bigquery.Client(credentials=credentials_data,project=cfg.fnl_prj)
-    data = (srch)
-    Query = 'INSERT ' + cfg.status_table + ' VALUES (' + srch_key + ',' + jid + ',' + srch_lvl + ',Complete)' 
-    insert_res = bq_client.query(Query)
-    return str(insert_res.result())
+    Query = 'UPDATE ' + table + ' SET status = "' + status + '" WHERE job_id = "' + job_id + '"'
+    table_update = bq_client.query(Query)
+    if (table_update.errors != None):
+        status = 'Error: Updating status table'
+        update_error = True
+
+
+def kill_process(status,job_id):
+    update_bq(status,job_id)
+    exit()
 
 
 @app.route('/')
 def main():
+    global status, job_id
+    status = ''
     args = request.args
     if ('key' in args) and ('jid' in args):
         search_key = args['key']
@@ -119,13 +132,29 @@ def main():
         else:
             search_lvl = 3
     else:
+        #data = (key,jid,lvl,status)
+        data = ('NA','Jxxxxxx',9,'Error in searchkey or job id at ' + str(datetime.now(pytz.timezone('US/Eastern'))))
+        insert_bq(str(data),cfg.status_table)
         return 'You are on the wrong page'
+
+    t1 = threading.Thread(target=process_main, args=(search_key,search_lvl,job_id,))
+    t1.start()
+
+    status = 'Started: Python process'
+    update_bq(status,job_id)
+    if (update_error):
+        data = (search_key,job_id,search_lvl,'Error: updating status')
+        insert_bq(str(data),cfg.status_table)
+        exit()
+    return 'Process Running: "' + job_id + '"'
+
+
+def process_main(search_key,search_lvl,job_id):
+    global status
     result_list = []
     table_list = process_tablelist(search_key)
-
     if(len(table_list) > 0 and search_lvl > 1):
         script_list = process_scriptlist(table_list)
-
         if(len(script_list) > 0 and search_lvl > 2):
             (unique_prefix_list,prefix_dict) = prepare_for_pythonlist(script_list)
             python_list = process_pythonlist(unique_prefix_list,prefix_dict)
@@ -138,30 +167,30 @@ def main():
                 else:
                     python = 'No python scripts found for the SQL'
                     result_list.append((prj,dset,table,tabltyp,cfg.pathextension + script,python,search_lvl,ts))
-
         elif (len(script_list) > 0): 
             ts = str(datetime.now(pytz.timezone('US/Eastern'))) 
             for (prj,dset,table,tabltyp,script) in script_list:
                 result_list.append((prj,dset,table,tabltyp,cfg.pathextension + script,'NA',search_lvl,ts))
-
         else:
             ts = str(datetime.now(pytz.timezone('US/Eastern')))
             for (prj,dset,table,tabltyp) in table_list:
                 result_list.append((prj,dset,table,tabltyp,
                                'No SQLs found for the table','NA',search_lvl,ts))
-
-
     elif len(table_list) > 0:
         ts = str(datetime.now(pytz.timezone('US/Eastern')))
         for (prj,dset,table,tabltyp) in table_list:
             result_list.append((prj,dset,table,tabltyp,'NA','NA',search_lvl,ts))
-
     if (len(result_list) > 0):
-        result = insert_bq(str(result_list)[1:-1],cfg.fnl_table) # [1:-1] is to remove external square brackets[] of the list
+        insert_bq(str(result_list)[1:-1],cfg.fnl_table) # [1:-1] is to remove external square brackets[] of the list
+        status = 'Complete: Pyhton process completed'
+    else:
+        status = 'Complete: No table found'
 
-    status_data = (search_key,job_id,search_lvl,'complete')
-    status = insert_bq(str(status_data),cfg.status_table)
-    return 'Namasthe'
+    update_bq(status,job_id)
+    if (update_error):
+        data = (search_key,job_id,search_lvl,'Error updating')
+        insert_bq(str(data),cfg.status_table)
+        exit()
 
 if __name__ == '__main__':
     app.run()

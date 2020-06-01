@@ -1,5 +1,4 @@
-runtime: python
-env: flex
+runtime: python37
 entrypoint: gunicorn -t 180 -b :$PORT main:app
 
 runtime_config:
@@ -12,4 +11,4 @@ runtime_config:
 
 handlers:
 - url: /.*
-  script: main:app
+  script: auto
